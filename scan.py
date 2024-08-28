@@ -42,6 +42,7 @@ def parse_barcode(barcode):
 
 # Fonction pour charger et afficher les données du fichier Excel
 def load_excel(file):
+    wb = openpyxl.load_workbook(file)
     df = pd.read_excel(file)
     return df
 

@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import sqlite3
-import openpyxl
 
 # Connexion à la base de données SQLite
 conn = sqlite3.connect('inventory_management.db')

@@ -1,7 +1,8 @@
 import streamlit as st
 import pandas as pd
 import sqlite3
-#import openpyxl
+import openpyxl
+
 # Connexion à la base de données SQLite
 conn = sqlite3.connect('inventory_management.db')
 c = conn.cursor()
@@ -42,7 +43,7 @@ def parse_barcode(barcode):
 
 # Fonction pour charger et afficher les données du fichier Excel
 def load_excel(file):
-    #wb = openpyxl.load_workbook(file)
+    wb = openpyxl.load_workbook(file)
     df = pd.read_excel(file, engine='openpyxl')
     return df
 
@@ -65,6 +66,12 @@ def reset_stock(conn):
     c.execute("DELETE FROM stock_consultation")
     conn.commit()
     st.success("Stock réinitialisé avec succès.")
+
+# Fonction pour exporter les données vers un fichier Excel
+def export_to_excel(data, filename):
+    df = pd.DataFrame(data, columns=["Lot", "Code Article", "Poids Physique", "Remarque"])
+    df.to_excel(filename, index=False)
+    return filename
 
 # Interface utilisateur
 st.title("Gestion de l'Inventaire et Consultation du Stock")
@@ -97,6 +104,7 @@ if choice == "Inventaire":
                         st.success(f"Lot: {lot}, Code Article: {code_article}, Poids: {poids_bobine} kg - enregistré avec succès.")
                         # Réinitialiser les champs après l'enregistrement
                         st.experimental_rerun()
+                        st.error("Succés : Le lot est ajouté avec succés.")
                     except sqlite3.IntegrityError:
                         st.error("Erreur : Le lot existe déjà dans la base de données.")
 
@@ -176,59 +184,42 @@ if choice == "Inventaire":
     if scanned_data:
         df = pd.DataFrame(scanned_data, columns=["Lot", "Code Article", "Poids Physique", "Remarque"])
         st.table(df)
+
+        # Option d'exportation vers Excel
+        if st.button("Exporter vers Excel"):
+            filename = "inventory_data.xlsx"
+            export_to_excel(scanned_data, filename)
+            st.success("Données exportées avec succès. Téléchargez le fichier ci-dessous :")
+            st.download_button(label="Télécharger le fichier Excel", data=open(filename, "rb"), file_name=filename)
+
     else:
         st.write("Aucun code-barres scanné pour le moment.")
 
 elif choice == "Consultation du Stock":
     st.subheader("Consultation du Stock")
 
-    # Vérifier si le stock existe déjà
-    c.execute("SELECT COUNT(*) FROM stock_consultation")
-    stock_exists = c.fetchone()[0] > 0
+    # Importation du fichier Excel
+    uploaded_file = st.file_uploader("Télécharger un fichier Excel", type=["xlsx"])
 
-    if not stock_exists:
-        uploaded_file = st.file_uploader("Choisissez un fichier Excel", type=["xlsx", "xls"])
-        if uploaded_file:
-            df = load_excel(uploaded_file)
-            st.write("Données du fichier Excel chargées :")
-            st.dataframe(df)
+    if uploaded_file is not None:
+        df = load_excel(uploaded_file)
+        st.write("Données du fichier :", df)
+        
+        if st.button("Ajouter au Stock"):
+            insert_stock_data(conn, df)
+            st.success("Données ajoutées au stock avec succès.")
 
-            # Extraction des colonnes spécifiques
-            columns_to_extract = ["Code Article", "Magasin", "Lot", "A utilisation libre", "Val. utilis. libre", "Bloqué", "Désignation article"]
-            extracted_df = df[columns_to_extract]
+    # Réinitialiser le stock
+    if st.button("Réinitialiser le Stock"):
+        reset_stock(conn)
 
-            st.write("Données extraites :")
-            st.dataframe(extracted_df)
-
-            if st.button("Valider"):
-                insert_stock_data(conn, extracted_df)
-                st.success("Données du stock enregistrées dans la base de données.")
-                st.experimental_rerun()
-
+    # Afficher le stock actuel
+    current_stock = c.execute("SELECT * FROM stock_consultation").fetchall()
+    if current_stock:
+        stock_df = pd.DataFrame(current_stock, columns=["Code Article", "Magasin", "Lot", "Utilisation Libre", "Valeur Utilisation Libre", "Bloqué", "Désignation Article"])
+        st.table(stock_df)
     else:
-        search_input = st.text_input("Recherche dans le stock")
+        st.write("Aucun stock disponible.")
 
-        if search_input:
-            query = """
-            SELECT code_article AS 'Code Article', magasin AS 'Magasin', lot AS 'Lot', utilisation_libre AS 'A utilisation libre', 
-            valeur_utilisation_libre AS 'Val. utilis. libre', bloque AS 'Bloqué', designation_article AS 'Désignation article'
-            FROM stock_consultation
-            WHERE code_article LIKE ? OR lot LIKE ? OR designation_article LIKE ?
-            """
-            params = ('%' + search_input + '%', '%' + search_input + '%', '%' + search_input + '%')
-
-            searched_data = c.execute(query, params).fetchall()
-
-            if searched_data:
-                df = pd.DataFrame(searched_data, columns=["Code Article", "Magasin", "Lot", "A utilisation libre", "Val. utilis. libre", "Bloqué", "Désignation article"])
-                st.table(df)
-            else:
-                st.write("Aucun résultat trouvé.")
-
-        if st.button("Réinitialiser Stock"):
-            reset_stock(conn)
-            st.experimental_rerun()
-
-
-# Fermeture de la connexion à la base de données
+# Fermer la connexion à la base de données
 conn.close()

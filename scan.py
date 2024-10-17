@@ -74,14 +74,14 @@ def export_to_excel(data, filename):
     return filename
 
 # Interface utilisateur
-st.title("Gestion de l'Inventaire et Consultation du Stock")
+st.title("Gestion de l'Inventaire")
 
 # Menu de navigation pour basculer entre les deux parties
-menu = ["Inventaire", "Consultation du Stock"]
+menu = ["Inventaire"]
 choice = st.sidebar.selectbox("Choisir une option", menu)
 
 if choice == "Inventaire":
-    st.subheader("Gestion de l'Inventaire")
+    st.subheader("Gestion de l'Inventaire by @Elharrat")
 
     # Choisir entre Scan ou Saisie Manuelle
     option = st.selectbox("Choisir une méthode d'entrée", ["Scanner un code-barres", "Saisie manuelle"])
@@ -195,31 +195,31 @@ if choice == "Inventaire":
     else:
         st.write("Aucun code-barres scanné pour le moment.")
 
-elif choice == "Consultation du Stock":
-    st.subheader("Consultation du Stock")
+# elif choice == "Consultation du Stock":
+#     st.subheader("Consultation du Stock")
 
-    # Importation du fichier Excel
-    uploaded_file = st.file_uploader("Télécharger un fichier Excel", type=["xlsx"])
+#     # Importation du fichier Excel
+#     uploaded_file = st.file_uploader("Télécharger un fichier Excel", type=["xlsx"])
 
-    if uploaded_file is not None:
-        df = load_excel(uploaded_file)
-        st.write("Données du fichier :", df)
+#     if uploaded_file is not None:
+#         df = load_excel(uploaded_file)
+#         st.write("Données du fichier :", df)
         
-        if st.button("Ajouter au Stock"):
-            insert_stock_data(conn, df)
-            st.success("Données ajoutées au stock avec succès.")
+#         if st.button("Ajouter au Stock"):
+#             insert_stock_data(conn, df)
+#             st.success("Données ajoutées au stock avec succès.")
 
-    # Réinitialiser le stock
-    if st.button("Réinitialiser le Stock"):
-        reset_stock(conn)
+#     # Réinitialiser le stock
+#     if st.button("Réinitialiser le Stock"):
+#         reset_stock(conn)
 
-    # Afficher le stock actuel
-    current_stock = c.execute("SELECT * FROM stock_consultation").fetchall()
-    if current_stock:
-        stock_df = pd.DataFrame(current_stock, columns=["Code Article", "Magasin", "Lot", "Utilisation Libre", "Valeur Utilisation Libre", "Bloqué", "Désignation Article"])
-        st.table(stock_df)
-    else:
-        st.write("Aucun stock disponible.")
+#     # Afficher le stock actuel
+#     current_stock = c.execute("SELECT * FROM stock_consultation").fetchall()
+#     if current_stock:
+#         stock_df = pd.DataFrame(current_stock, columns=["Code Article", "Magasin", "Lot", "Utilisation Libre", "Valeur Utilisation Libre", "Bloqué", "Désignation Article"])
+#         st.table(stock_df)
+#     else:
+#         st.write("Aucun stock disponible.")
 
 # Fermer la connexion à la base de données
 conn.close()
